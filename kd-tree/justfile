@@ -1,2 +1,4 @@
 test:
   zig test src/point.zig
+  zig test src/kdNode.zig
+  zig test src/kdTree.zig

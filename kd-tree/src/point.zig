@@ -1,60 +1,51 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
 
-const Point = struct {
-    coords: []f64,
-    allocator: Allocator,
+pub fn Point(comptime SIZE: usize) type {
+    return struct {
+        coords: [SIZE]f64,
 
-    pub fn init(allocator: Allocator, coords: []const f64) !Point {
-        const owned = try allocator.dupe(f64, coords);
-        return Point{ .coords = owned, .allocator = allocator };
-    }
-
-    pub fn deinit(self: *Point) void {
-        self.allocator.free(self.coords);
-    }
-
-    pub fn distanceSquared(self: *const Point, other: *const Point) f64 {
-        var sum: f64 = 0.0;
-        for (self.coords, other.coords) |a, b| {
-            const diff = a - b;
-            sum += diff * diff;
+        pub fn init(coords: [SIZE]f64) Point(SIZE) {
+            return Point(SIZE){ .coords = coords };
         }
-        return sum;
-    }
-};
+
+        pub fn distance(self: *const Point(SIZE), other: *const Point(SIZE)) f64 {
+            var sum: f64 = 0.0;
+            for (self.coords, other.coords) |a, b| {
+                const diff = a - b;
+                sum += diff * diff;
+            }
+            return @sqrt(sum);
+        }
+    };
+}
 
 const TOLERANCE_TEST = 1.0e-6;
 
-test "use Point" {
-    const gpa = std.testing.allocator;
-    const expected = [_]f64{ 1.0, 2.0, 3.0 };
-    var p1 = try Point.init(gpa, &expected);
-    defer p1.deinit();
+inline fn testInit(comptime SIZE: usize, data: [SIZE]f64) !void {
+    const PointFixed = Point(SIZE);
+    const p1 = PointFixed.init(data);
 
-    for (expected, p1.coords) |exp, val| {
+    // std.debug.print("Type: {}\n", .{@TypeOf(p1)});
+
+    for (data, p1.coords) |exp, val| {
         try std.testing.expectApproxEqAbs(exp, val, TOLERANCE_TEST);
     }
 }
 
-test "zero distance" {
-    const gpa = std.testing.allocator;
-    var p1 = try Point.init(gpa, &[_]f64{ 1.0, 2.0, 3.0 });
-    var p2 = try Point.init(gpa, &[_]f64{ 1.0, 2.0, 3.0 });
-    defer p1.deinit();
-    defer p2.deinit();
-
-    const dist = p1.distanceSquared(&p2);
-    try std.testing.expectApproxEqAbs(0.0, dist, TOLERANCE_TEST);
+// Test creation of Point() with varying sizes.
+test "use Point" {
+    try testInit(1, [_]f64{1.0});
+    try testInit(2, [_]f64{ 1.0, 2.0 });
+    try testInit(3, [_]f64{ 1.0, 2.0, 3.0 });
+    try testInit(4, [_]f64{ 1.0, 2.0, 3.0, 4.0 });
 }
 
-test "one distance" {
-    const gpa = std.testing.allocator;
-    var p1 = try Point.init(gpa, &[_]f64{ 1.0, 2.0, 3.0 });
-    var p2 = try Point.init(gpa, &[_]f64{ 1.0, 2.0, 4.0 });
-    defer p1.deinit();
-    defer p2.deinit();
+// Test Point().distance() function.
+test "compute distance" {
+    const Point3 = Point(3);
+    const p1 = Point3.init([_]f64{ 1.0, 2.0, 3.0 });
+    const p2 = Point3.init([_]f64{ -1.0, 1.0, 7.0 });
 
-    const dist = p1.distanceSquared(&p2);
-    try std.testing.expectApproxEqAbs(1.0, dist, TOLERANCE_TEST);
+    const dist = p1.distance(&p2);
+    try std.testing.expectApproxEqAbs(@sqrt(21.0), dist, TOLERANCE_TEST);
 }

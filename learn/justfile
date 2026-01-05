@@ -1,2 +1,2 @@
 test:
-  zig test index.zig
+  for file in *.zig; do zig test "$file"; done

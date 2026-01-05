@@ -19,7 +19,7 @@ jobs:
 
       - uses: extractions/setup-just@v3
         with:
-          just-version: latest
+          just-version: '1.43.1'
 
       - run: just tutorial::test
 
